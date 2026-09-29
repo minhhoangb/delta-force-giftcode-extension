@@ -1,6 +1,6 @@
-# Delta Force Giftcode TXT — Extension cục bộ
+# Delta Force Giftcode — Extension
 
-Extension Chrome/Edge đọc file TXT và thao tác trực tiếp trên tab đổi quà Delta Force Garena đang mở. Không cần Python, Selenium, ChromeDriver hay dịch vụ bên thứ ba.
+Extension Chrome/Edge đọc file TXT và thao tác trực tiếp trên tab đổi quà Delta Force Garena đang mở.
 
 ## Cài trên Chrome
 
