@@ -92,13 +92,15 @@
 
 #dfgb-root .dfgb-settings {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 9px;
   margin-bottom: 12px;
 }
 
 #dfgb-root .dfgb-settings label > span { display: block; margin-bottom: 5px; color: #9db0c8; font-size: 11px; }
 #dfgb-root .dfgb-settings label > div { display: flex; align-items: center; gap: 6px; }
+#dfgb-root .dfgb-fixed-delay { min-height: 36px; padding: 0 10px; border: 1px solid #29405f; border-radius: 8px; background: #0d1a2a; }
+#dfgb-root .dfgb-fixed-delay strong { color: #fff; font-size: 16px; }
 #dfgb-root .dfgb-settings input {
   width: 100%;
   height: 36px;

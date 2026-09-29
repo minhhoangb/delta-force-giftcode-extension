@@ -1,6 +1,8 @@
-# Delta Force Giftcode TXT — Extension cục bộ
+# Delta Force Giftcode TXT — Auto redeem code Delta Force
 
 Extension Chrome/Edge đọc file TXT và thao tác trực tiếp trên tab đổi quà Delta Force Garena đang mở. Không cần Python, Selenium, ChromeDriver hay dịch vụ bên thứ ba.
+
+Extension nhận kết quả ở cả popup `#diaTips` và mã lỗi ẩn trong `#superTips`, nên code lỗi không làm hàng đợi đứng ở mục đầu tiên.
 
 ## Cài trên Chrome
 
@@ -23,11 +25,11 @@ Extension Chrome/Edge đọc file TXT và thao tác trực tiếp trên tab đ�
 1. Bấm biểu tượng extension rồi chọn **Mở trang đổi code**.
 2. Đăng nhập trên trang Delta Force Garena.
 3. Trong bảng nổi bên phải, bấm **Chọn file TXT**. Mỗi dòng là một giftcode; dòng trống và dòng bắt đầu bằng `#` sẽ được bỏ qua.
-4. Tự nhập thời gian chờ giữa các code và thời gian tối đa chờ thông báo.
+4. Khoảng nghỉ giữa hai code được cố định ở `2` giây.
 5. Bấm **Bắt đầu**. Extension nhập code, bấm **Đổi**, đọc thông báo, bấm nút **X**, xóa code cũ rồi chờ trước khi xử lý code tiếp theo.
 6. Có thể **Tạm dừng**, **Dừng**, tiếp tục từ code chưa xử lý, **Xuất CSV** hoặc **Xuất code lỗi TXT**.
 
-Nếu hết thời gian chờ mà trang không hiện thông báo, extension đánh dấu code là **Bỏ qua**, xóa code khỏi ô nhập, chờ đúng số giây đã cài đặt rồi tiếp tục với code kế tiếp. Nút **Xuất code lỗi TXT** tạo file chỉ chứa các code không thành công, mỗi code một dòng để dễ chạy lại.
+Sau khi bấm **Đổi**, extension chờ đến khi trang thực sự trả kết quả, đọc thông báo, bấm **X**, xóa code cũ và chờ cố định `2` giây trước khi xử lý code tiếp theo. Nút **Xuất code lỗi TXT** tạo file chỉ chứa các code không thành công, mỗi code một dòng để dễ chạy lại.
 
 Nếu không thấy bảng điều khiển sau khi cài, hãy tải lại trang đổi quà một lần hoặc bấm biểu tượng extension → **Hiện / ẩn bảng điều khiển**.
 

@@ -10,8 +10,8 @@
   const DIALOG_SELECTOR = "#diaTips";
   const DIALOG_TEXT_SELECTOR = "#diaTips p";
   const DIALOG_CLOSE_SELECTOR = "#diaTips .btn-close";
-  const DEFAULT_DELAY_SECONDS = 5;
-  const DEFAULT_TIMEOUT_SECONDS = 25;
+  const INLINE_MESSAGE_SELECTOR = "#superTips";
+  const CODE_DELAY_SECONDS = 2;
 
   let codes = [];
   let results = [];
@@ -24,11 +24,11 @@
   const host = document.createElement("section");
   host.id = "dfgb-root";
   host.innerHTML = `
-    <div class="dfgb-panel" role="region" aria-label="Delta Force Giftcode TXT">
+    <div class="dfgb-panel" role="region" aria-label="Auto redeem code Delta Force">
       <header class="dfgb-header">
         <div>
           <strong>Delta Force Giftcode</strong>
-          <span>TXT Form Filler</span>
+          <span>Auto redeem code Delta Force</span>
         </div>
         <button type="button" class="dfgb-icon-button" id="dfgb-collapse" title="Thu gọn">−</button>
       </header>
@@ -47,11 +47,7 @@
         <div class="dfgb-settings">
           <label>
             <span>Chờ giữa các code</span>
-            <div><input id="dfgb-delay" type="number" min="2" max="600" step="0.5" value="${DEFAULT_DELAY_SECONDS}"><em>giây</em></div>
-          </label>
-          <label>
-            <span>Chờ thông báo tối đa</span>
-            <div><input id="dfgb-timeout" type="number" min="5" max="120" step="1" value="${DEFAULT_TIMEOUT_SECONDS}"><em>giây</em></div>
+            <div class="dfgb-fixed-delay"><strong>${CODE_DELAY_SECONDS}</strong><em>giây (cố định)</em></div>
           </label>
         </div>
 
@@ -95,8 +91,6 @@
     collapse: $("#dfgb-collapse"),
     fileInput: $("#dfgb-file-input"),
     fileName: $("#dfgb-file-name"),
-    delay: $("#dfgb-delay"),
-    timeout: $("#dfgb-timeout"),
     start: $("#dfgb-start"),
     pause: $("#dfgb-pause"),
     stop: $("#dfgb-stop"),
@@ -115,7 +109,6 @@
 
   class StopRequestedError extends Error {}
   class BlockedPageError extends Error {}
-  class ResultTimeoutError extends Error {}
 
   function clampNumber(value, minimum, maximum, fallback) {
     const number = Number(value);
@@ -159,12 +152,16 @@
       "không hợp lệ",
       "đã được sử dụng",
       "hết hạn",
+      "xin lỗi",
+      "sorry",
+      "not gained access",
+      "error_",
       "failed",
       "invalid",
       "expired",
       "already used"
     ];
-    if (failurePhrases.some((phrase) => normalized.includes(phrase))) return "Thông báo";
+    if (failurePhrases.some((phrase) => normalized.includes(phrase))) return "Lỗi";
     const successPhrases = [
       "đã nhận thành công",
       "thành công",
@@ -194,8 +191,6 @@
     ui.exportErrors.disabled = !results.some((item) => item.status !== "Thành công");
 
     ui.fileInput.disabled = running;
-    ui.delay.disabled = running;
-    ui.timeout.disabled = running;
     ui.start.disabled = running || total === 0;
     ui.pause.disabled = !running;
     ui.stop.disabled = !running;
@@ -246,9 +241,7 @@
       codes,
       results,
       currentIndex,
-      fileName: ui.fileName.textContent,
-      delay: clampNumber(ui.delay.value, 2, 600, DEFAULT_DELAY_SECONDS),
-      timeout: clampNumber(ui.timeout.value, 5, 120, DEFAULT_TIMEOUT_SECONDS)
+      fileName: ui.fileName.textContent
     };
     chrome.storage.local.set({ [STORAGE_KEY]: state });
   }
@@ -263,8 +256,6 @@
     results = Array.isArray(state.results) ? state.results : [];
     currentIndex = Math.min(clampNumber(state.currentIndex, 0, codes.length, 0), codes.length);
     ui.fileName.textContent = state.fileName || (codes.length ? `Đã lưu • ${codes.length} code` : "Chưa chọn file");
-    ui.delay.value = String(clampNumber(state.delay, 2, 600, DEFAULT_DELAY_SECONDS));
-    ui.timeout.value = String(clampNumber(state.timeout, 5, 120, DEFAULT_TIMEOUT_SECONDS));
     if (codes.length) setBanner(`Đã khôi phục ${codes.length} code từ bộ nhớ cục bộ.`, "info");
     updateUi();
   }
@@ -275,6 +266,7 @@
     else input.value = value;
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: value ? "a" : "Backspace" }));
   }
 
   function closeDialogIfVisible() {
@@ -312,20 +304,23 @@
     }
   }
 
-  async function waitForResult(timeoutMilliseconds) {
-    const deadline = Date.now() + timeoutMilliseconds;
-    while (Date.now() < deadline) {
+  async function waitForResult() {
+    while (true) {
       await checkControlState();
       const dialog = document.querySelector(DIALOG_SELECTOR);
       if (isVisible(dialog)) {
         const message = document.querySelector(DIALOG_TEXT_SELECTOR)?.textContent?.trim();
         return message || "Trang đã hiện thông báo nhưng không đọc được nội dung.";
       }
+      const inlineMessage = document.querySelector(INLINE_MESSAGE_SELECTOR);
+      const inlineText = inlineMessage?.textContent?.trim();
+      if (inlineText) {
+        await sleep(80);
+        const readableMessage = document.querySelector(DIALOG_TEXT_SELECTOR)?.textContent?.trim();
+        return readableMessage || inlineText;
+      }
       await sleep(120);
     }
-    throw new ResultTimeoutError(
-      `Không thấy thông báo sau ${Math.round(timeoutMilliseconds / 1000)} giây — đã bỏ qua code này.`
-    );
   }
 
   async function redeemOne(code, number) {
@@ -340,15 +335,16 @@
     }
 
     input.focus();
+    const inlineMessage = document.querySelector(INLINE_MESSAGE_SELECTOR);
+    if (inlineMessage) inlineMessage.textContent = "";
     setNativeInputValue(input, "");
     setNativeInputValue(input, code);
-    input.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "Unidentified" }));
     setCurrent(`Đang đổi ${number}/${codes.length}: ${code}`);
     await sleep(250);
 
+    button.classList.remove("gray");
     button.click();
-    const timeoutSeconds = clampNumber(ui.timeout.value, 5, 120, DEFAULT_TIMEOUT_SECONDS);
-    const message = await waitForResult(timeoutSeconds * 1000);
+    const message = await waitForResult();
     const status = classifyMessage(message);
 
     closeDialogIfVisible();
@@ -390,11 +386,10 @@
           result = await redeemOne(code, currentIndex + 1);
         } catch (error) {
           if (error instanceof StopRequestedError || error instanceof BlockedPageError) throw error;
-          const timedOut = error instanceof ResultTimeoutError;
           result = {
             number: currentIndex + 1,
             code,
-            status: timedOut ? "Bỏ qua" : "Lỗi",
+            status: "Lỗi",
             message: error instanceof Error ? error.message : String(error),
             time: formatTime()
           };
@@ -409,8 +404,7 @@
         updateUi();
 
         if (currentIndex < codes.length) {
-          const delaySeconds = clampNumber(ui.delay.value, 2, 600, DEFAULT_DELAY_SECONDS);
-          await waitInterruptibly(delaySeconds * 1000, "Chờ trước code tiếp theo:");
+          await waitInterruptibly(CODE_DELAY_SECONDS * 1000, "Chờ trước code tiếp theo:");
         }
       }
 
@@ -502,14 +496,6 @@
     }
   });
 
-  ui.delay.addEventListener("change", () => {
-    ui.delay.value = String(clampNumber(ui.delay.value, 2, 600, DEFAULT_DELAY_SECONDS));
-    saveState();
-  });
-  ui.timeout.addEventListener("change", () => {
-    ui.timeout.value = String(clampNumber(ui.timeout.value, 5, 120, DEFAULT_TIMEOUT_SECONDS));
-    saveState();
-  });
   ui.start.addEventListener("click", runQueue);
   ui.pause.addEventListener("click", () => {
     if (!running) return;
