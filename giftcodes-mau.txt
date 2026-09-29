@@ -1,0 +1,5 @@
+# Mỗi dòng là một giftcode.
+# Dòng trống và dòng bắt đầu bằng # sẽ được bỏ qua.
+
+GIFTCODE_MAU_001
+GIFTCODE_MAU_002
