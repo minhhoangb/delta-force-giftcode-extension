@@ -77,7 +77,10 @@
         <div class="dfgb-results" id="dfgb-results" aria-live="polite"></div>
 
         <footer class="dfgb-footer">
-          <button type="button" class="dfgb-link-button" id="dfgb-export" disabled>Xuất CSV</button>
+          <div class="dfgb-export-actions">
+            <button type="button" class="dfgb-link-button" id="dfgb-export" disabled>Xuất CSV</button>
+            <button type="button" class="dfgb-link-button" id="dfgb-export-errors" disabled>Xuất code lỗi TXT</button>
+          </div>
           <button type="button" class="dfgb-link-button" id="dfgb-reset">Làm mới danh sách</button>
         </footer>
       </main>
@@ -106,11 +109,13 @@
     current: $("#dfgb-current"),
     results: $("#dfgb-results"),
     export: $("#dfgb-export"),
+    exportErrors: $("#dfgb-export-errors"),
     reset: $("#dfgb-reset")
   };
 
   class StopRequestedError extends Error {}
   class BlockedPageError extends Error {}
+  class ResultTimeoutError extends Error {}
 
   function clampNumber(value, minimum, maximum, fallback) {
     const number = Number(value);
@@ -186,6 +191,7 @@
     ui.percent.textContent = `${percent}%`;
     ui.progressBar.style.width = `${percent}%`;
     ui.export.disabled = results.length === 0;
+    ui.exportErrors.disabled = !results.some((item) => item.status !== "Thành công");
 
     ui.fileInput.disabled = running;
     ui.delay.disabled = running;
@@ -317,7 +323,9 @@
       }
       await sleep(120);
     }
-    throw new Error(`Không thấy thông báo sau ${Math.round(timeoutMilliseconds / 1000)} giây.`);
+    throw new ResultTimeoutError(
+      `Không thấy thông báo sau ${Math.round(timeoutMilliseconds / 1000)} giây — đã bỏ qua code này.`
+    );
   }
 
   async function redeemOne(code, number) {
@@ -382,10 +390,11 @@
           result = await redeemOne(code, currentIndex + 1);
         } catch (error) {
           if (error instanceof StopRequestedError || error instanceof BlockedPageError) throw error;
+          const timedOut = error instanceof ResultTimeoutError;
           result = {
             number: currentIndex + 1,
             code,
-            status: "Lỗi",
+            status: timedOut ? "Bỏ qua" : "Lỗi",
             message: error instanceof Error ? error.message : String(error),
             time: formatTime()
           };
@@ -453,6 +462,21 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  function exportErrorCodes() {
+    const failedCodes = results
+      .filter((item) => item.status !== "Thành công")
+      .map((item) => item.code);
+    if (!failedCodes.length) return;
+
+    const text = "\uFEFF" + failedCodes.join("\r\n") + "\r\n";
+    const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `delta-force-giftcode-loi-${new Date().toISOString().replaceAll(":", "-").slice(0, 19)}.txt`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   ui.fileInput.addEventListener("change", async () => {
     const file = ui.fileInput.files?.[0];
     if (!file) return;
@@ -500,6 +524,7 @@
     setBanner("Đang dừng sau thao tác hiện tại…", "warning");
   });
   ui.export.addEventListener("click", exportCsv);
+  ui.exportErrors.addEventListener("click", exportErrorCodes);
   ui.reset.addEventListener("click", resetQueue);
   ui.collapse.addEventListener("click", () => {
     ui.body.hidden = !ui.body.hidden;

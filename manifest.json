@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Delta Force Giftcode TXT",
   "description": "Đọc giftcode từ file TXT và điền lần lượt trên trang đổi quà Delta Force Garena.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "permissions": [
     "activeTab",
     "storage"
